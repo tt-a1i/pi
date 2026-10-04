@@ -1395,6 +1395,12 @@ export abstract class TuiBase extends Container implements TUI {
 
 		// Composite each overlay
 		for (const { overlayLines, row, col, w } of rendered) {
+			// Full viewport coverage hides every cell of underlying image placements,
+			// not just their anchor rows. Let the fullscreen renderer reclaim and
+			// restore those placements from the resulting frame; partial overlays
+			// still need placement-aware clipping before they can hide images safely.
+			const coversViewport =
+				this.mode === "fullscreen" && row === 0 && col === 0 && w >= termWidth && overlayLines.length >= termHeight;
 			for (let i = 0; i < overlayLines.length; i++) {
 				const idx = viewportStart + row + i;
 				if (idx >= 0 && idx < result.length) {
@@ -1402,7 +1408,13 @@ export abstract class TuiBase extends Container implements TUI {
 					// (components should already respect width, but this ensures it)
 					const truncatedOverlayLine =
 						visibleWidth(overlayLines[i]) > w ? sliceByColumn(overlayLines[i], 0, w, true) : overlayLines[i];
-					result[idx] = this.compositeLineAt(result[idx], truncatedOverlayLine, col, w, termWidth);
+					result[idx] = this.compositeLineAt(
+						coversViewport ? "" : result[idx],
+						truncatedOverlayLine,
+						col,
+						w,
+						termWidth,
+					);
 				}
 			}
 		}
